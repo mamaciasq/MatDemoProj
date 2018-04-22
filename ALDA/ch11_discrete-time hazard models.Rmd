@@ -7,7 +7,7 @@ output: html_notebook
 
 ### Chapter 11: Fitting basic discrete-time hazard models
 
-Los ejemplos fueron escritos usando R, version 2.4.1.  Se requiere el  paquete `survival`.
+Los ejemplos fueron escritos usando R, versión 2.4.1.  Se requiere el  paquete `survival`.
 
 ```{r}
 library(survival)
