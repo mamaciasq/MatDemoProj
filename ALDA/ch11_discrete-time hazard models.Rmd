@@ -1,0 +1,393 @@
+---
+title: "Ejemplos en R"
+output: html_notebook
+---
+
+## _Applied Longitudinal Data Analysis: Modeling Change and Event Occurrence_ by Judith D. Singer and John B. Willett 
+
+### Chapter 11: Fitting basic discrete-time hazard models
+
+Los ejemplos fueron escritos usando R, version 2.4.1.  Se requiere el  paquete `survival`.
+
+```{r}
+library(survival)
+```
+
+Figure 11.1, page 359
+
+```{r}
+firstsex<-read.table("https://stats.idre.ucla.edu/stat/examples/alda/firstsex.csv", sep=",", header=T)
+ts0 <- survfit( Surv(time, 1-censor)~ 1, conf.type="none", subset=(pt==0), data=firstsex)
+ts1 <- survfit( Surv(time, 1-censor)~ 1, conf.type="none", subset=(pt==1), data=firstsex)
+
+h0<-ts0$n.event/ts0$n.risk
+h1<-ts1$n.event/ts1$n.risk
+
+plot(ts0$time, h0, type="l", ylab="Estimated Hazard probability", xlab="Grade", 
+     ylim=c(0.0, 0.5), xlim=c(6, 12), col="red")
+par(new=T) 
+plot(ts1$time, h1, type="l", ylab=" ", ylim=c(0.0, 0.5), xlim=c(6, 12), xlab="", col="blue")
+```
+
+```{r}
+plot(ts0$time, ts0$surv, type="l", ylab="Estimated Survival Function", xlab="Grade", 
+     ylim=c(0.0, 1.0), xlim=c(6, 12), col="red")
+par(new=T)
+plot(ts1$time, ts1$surv, type="l", ylab=" ", ylim=c(0.0, 1.0), xlim=c(6, 12), xlab="", col="blue")
+abline(h=c(.5), lty=2)
+```
+
+Table 11.1, page 360. Crearemos la tabla en dos partes. La primera está basada en el resultado del ejemplo anterior.
+
+```{r}
+tab11.1.0<-cbind(time=ts0$time, nleft=ts0$n.risk, failed=ts0$n.event, hazard=h0, survival=ts0$surv)
+tab11.1.1<-cbind(time=ts1$time, nleft=ts1$n.risk, failed=ts1$n.event, hazard=h1, survival=ts1$surv)
+tab11.1 <-rbind(tab11.1.0, tab11.1.1)
+tab11.1
+```
+
+```{r}
+tsall <- survfit( Surv(time, 1-censor)~ 1, conf.type="none", data=firstsex)
+h<-tsall$n.event/tsall$n.risk
+tab11.1.all<-cbind(time=tsall$time, nleft=tsall$n.risk, failed=tsall$n.event, hazard=h, survival=tsall$surv)
+tab11.1.all
+```
+
+Figure 11.2, page 363
+
+Usaremos las variables creadas para el ejemplo anterior que contiene la función hazard creada para la Figure 11.1 con el fin de producir los odds estimados y el logit(hazard) estimado.
+
+```{r}
+odds0<-h0/(1-h0)
+odds1<-h1/(1-h1)
+logith0<-log(odds0)
+logith1<-log(odds1)
+
+plot(ts0$time, h0, type="l", ylab="Estimated Hazard Probability", xlab="Grade", 
+     ylim=c(0.0, 1), xlim=c(6, 12), col="red")
+par(new=T) 
+plot(ts1$time, h1, type="l", ylab=" ", ylim=c(0.0, 1), xlim=c(6, 12), xlab="", col="blue")
+```
+```{r}
+plot(ts0$time, odds0, type="l", ylab="Estimated Odds", xlab="Grade", 
+     ylim=c(0,1), xlim=c(6, 12), col="red")
+par(new=T) 
+plot(ts1$time, odds1, type="l", ylab=" ", ylim=c(0, 1), xlim=c(6, 12), xlab="", col="blue")
+```
+
+```{r}
+plot(ts0$time, logith0, type="l", ylab="Estimated Logit", xlab="Grade", 
+     ylim=c(-4, 0), xlim=c(6, 12), col="red")
+par(new=T) 
+plot(ts1$time, logith1, type="l", ylab=" ", ylim=c(-4, 0), xlim=c(6, 12), xlab="", col="blue")
+```
+
+Figure 11.3 on page 366.
+
+Panel A: logit hazard es horizontal con el tiempo.
+
+```{r}
+firstsex.pp<-read.table("https://stats.idre.ucla.edu/stat/examples/alda/firstsex_pp.csv", sep=",", header=T)
+afit <- glm(event ~ pt, family="binomial", data=firstsex.pp)
+summary(afit)
+```
+```{r}
+t<-data.frame(afit$coefficients)
+p0<-t[1,1]
+p1<-p0+t[2,1]
+
+firstsex<-read.table("https://stats.idre.ucla.edu/stat/examples/alda/firstsex.csv", sep=",", header=T)
+ts0 <- survfit( Surv(time, 1-censor)~ 1, conf.type="none", subset=(pt==0), data=firstsex)
+ts1 <- survfit( Surv(time, 1-censor)~ 1, conf.type="none", subset=(pt==1), data=firstsex)
+h0<-ts0$n.event/ts0$n.risk
+h1<-ts1$n.event/ts1$n.risk
+
+odds0<-h0/(1-h0)
+odds1<-h1/(1-h1)
+logith0<-log(odds0)
+logith1<-log(odds1)
+plot(ts0$time, logith0, type="p", ylab="Estimated Logit", xlab="Grade", 
+     ylim=c(-4, 0), xlim=c(6, 12), col="red")
+par(new=T) 
+plot(ts1$time, logith1, type="p", ylab=" ", ylim=c(-4, 0), xlim=c(6, 12), xlab="", col="blue")
+abline(h=c(p0), lty=1, col="red")
+abline(h=c(p1), lty=1, col="blue")
+```
+
+Panel B: logit hazard es lineal con el tiempo
+
+```{r}
+afit2<-glm(event~pt + period, family="binomial", data=firstsex.pp)
+summary(afit2)
+```
+
+```{r}
+t<-data.frame(afit2$coefficients)
+y0<-t[1,1] + t[3,1]*ts0$time
+y1<-t[1,1] + t[2,1] + t[3,1]*ts0$time
+
+plot(ts0$time, logith0, type="p", ylab="Estimated Logit", xlab="Grade", 
+     ylim=c(-4, 0), xlim=c(6, 12), col="red")
+par(new=T) 
+plot(ts1$time, logith1, type="p", ylab=" ", ylim=c(-4, 0), xlim=c(6, 12), xlab="", col="blue")
+par(new=T)
+plot(ts1$time, y0, type="l", ylab=" ", ylim=c(-4, 0), xlim=c(6, 12), xlab="", col="red")
+par(new=T)
+plot(ts1$time, y1, type="l", ylab=" ", ylim=c(-4, 0), xlim=c(6, 12), xlab="", col="blue")
+```
+
+Panel C: Logit hazard es completamente general con el tiempo.
+
+```{r}
+afit3<-glm(event~pt + factor(period), family="binomial", data=firstsex.pp)
+summary(afit3)
+```
+
+```{r}
+t<-data.frame(cbind(y=afit3$linear.predictors, time=firstsex.pp$period, pt=firstsex.pp$pt))
+t0<-t[t$pt==0,]
+t0<-t0[order(t0$time),]
+t1<-t[t$pt==1,]
+t1<-t1[order(t1$time),]
+
+plot(ts0$time, logith0, type="p", ylab="Estimated Logit", xlab="Grade", 
+     ylim=c(-4, 0), xlim=c(6, 12), col="red")
+par(new=T) 
+plot(ts1$time, logith1, type="p", ylab=" ", ylim=c(-4, 0), xlim=c(6, 12), xlab="", col="blue")
+par(new=T)
+plot(t0$time, t0$y, type="l", ylab=" ", ylim=c(-4, 0), xlim=c(6, 12), xlab="", col="red")
+par(new=T)
+plot(t1$time, t1$y, type="l", ylab=" ", ylim=c(-4, 0), xlim=c(6, 12), xlab="", col="blue")
+```
+
+Figure 11.4, page 374
+
+Panel A:
+
+```{r}
+afit3<-glm(event~pt + factor(period), family="binomial", data=firstsex.pp)
+t<-data.frame(cbind(y=afit3$linear.predictors, time=firstsex.pp$period, pt=firstsex.pp$pt))
+t0<-t[t$pt==0,]
+t0<-t0[order(t0$time),]
+t1<-t[t$pt==1,]
+t1<-t1[order(t1$time),]
+
+plot(t0$time, t0$y, type="b", ylab=" ", ylim=c(-4, 0), xlim=c(6, 12), xlab="", col="red")
+par(new=T)
+plot(t1$time, t1$y, type="b", ylab=" ", ylim=c(-4, 0), xlim=c(6, 12), xlab="", col="blue")
+```
+
+Panel B:
+```{r}
+afit4<-glm(event~pt + factor(period) + pt*factor(period), family="binomial", data=firstsex.pp)
+
+t<-data.frame(cbind(y=exp(afit4$linear.predictors), time=firstsex.pp$period, pt=firstsex.pp$pt))
+t0<-t[t$pt==0,]
+t0<-t0[order(t0$time),]
+t1<-t[t$pt==1,]
+t1<-t1[order(t1$time),]
+
+plot(t0$time, t0$y, type="b", ylab="Odds", ylim=c(0, 1), xlim=c(6, 12), xlab="", col="red")
+par(new=T)
+plot(t1$time, t1$y, type="b", ylab=" ", ylim=c(0, 1), xlim=c(6, 12), xlab="", col="blue")
+```
+
+Panel C
+
+```{r}
+t<-data.frame(cbind(y=afit4$fitted.values, time=firstsex.pp$period, pt=firstsex.pp$pt))
+t0<-t[t$pt==0,]
+t0<-t0[order(t0$time),]
+t1<-t[t$pt==1,]
+t1<-t1[order(t1$time),]
+
+plot(t0$time, t0$y, type="b", ylab="Hazard", ylim=c(0, .5), xlim=c(6, 12), xlab="", col="red")
+par(new=T)
+plot(t1$time, t1$y, type="b", ylab=" ", ylim=c(0, .5), xlim=c(6, 12), xlab="", col="blue")
+```
+
+Tabla 11.3, página 386. Observe que para realizar el deviance test, a veces debemos ejecutar el modelo varias veces, una para cada variable que se prueba, ya que la variable que se está probando debe aparecer al final del modelo.
+
+Model A:
+
+```{r}
+modelA<-glm(event~factor(period) - 1, family="binomial", data=firstsex.pp)
+summary(modelA)
+```
+
+Model B:
+
+```{r}
+modelB<-glm(event~factor(period) + pt - 1, family="binomial", data=firstsex.pp)
+summary(modelB)
+```
+
+```{r}
+anova(modelB)
+```
+
+Model C:
+
+```{r}
+modelC<-glm(event~factor(period) + pas - 1, family="binomial", data=firstsex.pp)
+summary(modelC)
+```
+
+```{r}
+anova(modelC)
+```
+
+Modelo D
+
+```{r}
+modelD<-glm(event~factor(period) + pt + pas - 1, family="binomial", data=firstsex.pp)
+summary(modelD)
+```
+
+```{r}
+modelD<-glm(event~factor(period) + pas + pt - 1, family="binomial", data=firstsex.pp)
+anova(modelD)
+```
+
+```{r}
+modelD<-glm(event~factor(period) + pt + pas - 1, family="binomial", data=firstsex.pp)
+anova(modelD)
+```
+
+Table 11.4, page 388
+
+
+```{r}
+modelA<-glm(event~factor(period) - 1, family="binomial", data=firstsex.pp)
+col0<-c(7:12)
+col1<-c("D7", "D8", "D9", "D10", "D11", "D12")
+col2<-exp(modelA$coefficients)
+col3<- 1 /(1+exp(-modelA$coefficients))
+tab11.4<-data.frame(time=col0, Predictor=col1, parameter=modelA$coefficients, 
+         fitted.odds=col2, fitted.hazard=col3, row.names=NULL)
+tab11.4
+```
+
+Table 11.5 on page 392 based on Model B.
+
+```{r}
+modelB<-glm(event~factor(period) + pt - 1, family="binomial", data=firstsex.pp)
+t<-data.frame(hazard=modelB$fitted.values, time=firstsex.pp$period, pt=firstsex.pp$pt)
+t$logit<-log(t$hazard/(1-t$hazard))
+
+ta<-aggregate(t, list(pt=t$pt, time=t$time),mean)
+ta.0<-ta[ta$pt==0, ]
+ta.1<-ta[ta$pt==1, ]
+
+c1<-c(7:12)
+c2<-ta.0$logit
+c3<-ta.1$logit-ta.0$logit
+c4<-ta.0$logit
+c5<-ta.1$logit
+c6<-ta.0$hazard
+c7<-ta.1$hazard
+
+tab11.5<-data.frame(time=c1, alpha=c2, beta=c3, logit_0=c4, logit_1=c5, hazard_0=c6, hazard_1=c7)
+
+tab11.5$surv_0<-c(1:6)
+tab11.5$surv_1<-c(1:6)
+tab11.5$surv_0[1]<-1-tab11.5$hazard_0[1]
+tab11.5$surv_1[1]<-1-tab11.5$hazard_1[1]
+for(i in 2:6) {
+tab11.5$surv_0[i] = tab11.5$surv_0[i-1]*(1-tab11.5$hazard_0[i])
+tab11.5$surv_1[i] = tab11.5$surv_1[i-1]*(1-tab11.5$hazard_1[i])
+ }
+
+tab11.5
+```
+
+Figura 11.6, página 393 usando el Modelo B. Los datos para los gráficos, tab11.5, se han creado en el ejemplo anterior.
+
+```{r}
+plot(tab11.5$time, tab11.5$logit_0, type="l", ylab="Fitted logit(hazard)", 
+     ylim=c(-4, 0), xlim=c(6, 12), xlab="", col="red")
+par(new=T)
+plot(tab11.5$time, tab11.5$logit_1, type="l", ylab="", ylim=c(-4, 0), xlim=c(6, 12), xlab="", col="blue")
+```
+
+```{r}
+plot(tab11.5$time, tab11.5$hazard_0, type="l", ylab="Fitted hazard", 
+     ylim=c(0, 0.5), xlim=c(6, 12), xlab="", col="red")
+par(new=T)
+plot(tab11.5$time, tab11.5$hazard_1, type="l", ylab="", ylim=c(0, 0.5), xlim=c(6, 12), xlab="", col="blue")
+```
+
+```{r}
+plot(tab11.5$time, tab11.5$surv_0, type="l", ylab="Fitted survival probability", 
+     ylim=c(0, 1), xlim=c(6, 12), xlab="", col="red")
+par(new=T)
+plot(tab11.5$time, tab11.5$surv_1, type="l", ylab="", ylim=c(0,1), xlim=c(6, 12), xlab="", col="blue")
+abline(h=c(.5), lty=2)
+```
+
+Figure 11.7 de la página 395 basado en el Model D.
+
+```{r}
+modelD<-glm(event~factor(period) + pt + pas - 1, family="binomial", data=firstsex.pp)
+coeff<-data.frame(modelD$coefficients)
+myt<-c(1:6)
+h0_pas1<-c(1:6)
+h0_pas0<-c(1:6)
+h0_pasn1<-c(1:6)
+h1_pas1<-c(1:6)
+h1_pas0<-c(1:6)
+h1_pasn1<-c(1:6)
+
+for(i in 1:6) {
+myt[i]<-i+6
+h0_pas1[i]<-1/(1+ exp(-(coeff[i,] + coeff[8,])))
+h0_pas0[i]<-1/(1+ exp(-coeff[i,]))
+h0_pasn1[i]<-1/(1+ exp(-(coeff[i,] - coeff[8,])))
+h1_pas1[i]<-1/(1+ exp(-(coeff[i,] + coeff[8,] + coeff[7,])))
+h1_pas0[i]<-1/(1+ exp(-(coeff[i,] + coeff[7,])))
+h1_pasn1[i]<-1/(1+ exp(-(coeff[i,] - coeff[8,] + coeff[7,])))
+}
+f<-cbind(h0_pas1,h0_pas0,h0_pasn1, h1_pas1,h1_pas0,h1_pasn1)
+
+matplot(myt, f, type="l", ylab="Fitted hazard", ylim=c(0, 0.5), xlim=c(6, 12), 
+     xlab="Grade", col=1:6, lty=1:6)
+legend(6, .5, c("PT=0 pas=+1", "PT=0 pas=0", "PT=0 pas=-1", 
+                "PT=1 pas=+1", "PT=1 pas=0", "PT=1 pas=-1"), 
+                col=1:6, lty=1:6, pch = "*",
+                ncol =3, cex = 1)
+```
+
+```{r}
+surv0_pas1<-c(1:6)
+surv0_pas0<-c(1:6)
+surv0_pasn1<-c(1:6)
+surv1_pas1<-c(1:6)
+surv1_pas0<-c(1:6)
+surv1_pasn1<-c(1:6)
+
+surv0_pas1[1]<-1-h0_pas1[1]
+surv0_pas0<-1-h0_pas0[1]
+surv0_pasn1<-1-h0_pasn1[1]
+surv1_pas1<-1-h1_pas1[1]
+surv1_pas0<-1-h1_pas1[1]
+surv1_pasn1<-1-h1_pas1[1]
+
+for(i in 2:6) {
+surv0_pas1[i] = surv0_pas1[i-1]*(1-h0_pas1[i])
+surv0_pas0[i] = surv0_pas0[i-1]*(1-h0_pas0[i])
+surv0_pasn1[i] = surv0_pasn1[i-1]*(1-h0_pasn1[i])
+surv1_pas1[i] = surv1_pas1[i-1]*(1-h1_pas1[i])
+surv1_pas0[i] = surv1_pas0[i-1]*(1-h1_pas0[i])
+surv1_pasn1[i] = surv1_pasn1[i-1]*(1-h1_pasn1[i])
+ }
+
+s<-cbind(surv0_pas1,surv0_pas0,surv0_pasn1,surv1_pas1,surv1_pas0,surv1_pasn1)
+matplot(myt, s, type="l", ylab="Fitted survival probability", ylim=c(0, 1), xlim=c(6, 12), 
+     xlab="Grade", col=1:6, lty=1:6)
+abline(h=c(.5), lty=2)
+legend(6, .2, c("PT=0 pas=+1", "PT=0 pas=0", "PT=0 pas=-1", 
+                "PT=1 pas=+1", "PT=1 pas=0", "PT=1 pas=-1"), 
+                col=1:6, lty=1:6, pch = "*",
+                ncol =2, cex = 1)
+```
+
